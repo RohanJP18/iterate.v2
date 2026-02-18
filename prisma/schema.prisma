@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  users     User[]
+  integrations Integration[]
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String?   @map("password_hash")
+  name           String?
+  image          String?
+  organizationId String    @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accounts       Account[]
+  sessions       Session[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at       Int?
+  token_type       String?
+  scope             String?
+  id_token          String? @db.Text
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Integration {
+  id                      String    @id @default(cuid())
+  organizationId          String    @map("organization_id")
+  type                    String    // 'posthog'
+  encryptedApiKey         String?   @map("encrypted_api_key") @db.Text
+  encryptedAccessToken    String?   @map("encrypted_access_token") @db.Text
+  encryptedRefreshToken   String?   @map("encrypted_refresh_token") @db.Text
+  accessTokenExpiresAt    DateTime? @map("access_token_expires_at")
+  projectId               String?   @map("project_id")
+  host                    String?   // e.g. us.posthog.com
+  organization            Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@unique([organizationId, type])
+}
+
+model SessionRecording {
+  id                String   @id @default(cuid())
+  organizationId    String   @map("organization_id")
+  posthogSessionId  String   @map("posthog_session_id")
+  posthogRecordingId String  @map("posthog_recording_id")
+  startedAt         DateTime @map("started_at")
+  durationSeconds   Int      @map("duration_seconds")
+  metadata          Json?    // click_count, console_error_count, etc.
+  snapshotSummary   String?  @map("snapshot_summary") @db.Text
+  analysisPayload   String?  @map("analysis_payload") @db.Text
+  syncedAt          DateTime @default(now()) @map("synced_at")
+
+  issueSessions IssueSession[]
+
+  @@unique([organizationId, posthogRecordingId])
+  @@index([organizationId, startedAt])
+}
+
+model Issue {
+  id              String   @id @default(cuid())
+  organizationId  String   @map("organization_id")
+  title           String
+  description     String   @db.Text
+  severity        String   // critical, high, medium, low
+  status          String   // open, resolved
+  firstDetectedAt DateTime @map("first_detected_at")
+  suggestedFeature String? @map("suggested_feature") @db.Text
+  embeddingJson   String?  @map("embedding_json") @db.Text
+  createdAt       DateTime @default(now()) @updatedAt
+
+  issueSessions IssueSession[]
+}
+
+model IssueSession {
+  id                 String   @id @default(cuid())
+  issueId            String   @map("issue_id")
+  sessionRecordingId String  @map("session_recording_id")
+  timestampSeconds   Int      @map("timestamp_seconds")
+  snippet            String?  @db.Text
+
+  issue    Issue            @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  session  SessionRecording @relation(fields: [sessionRecordingId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, sessionRecordingId])
+  @@index([issueId])
+}
+
+model AnalysisRun {
+  id                 String   @id @default(cuid())
+  organizationId     String   @map("organization_id")
+  startedAt          DateTime @default(now()) @map("started_at")
+  finishedAt        DateTime? @map("finished_at")
+  recordingsProcessed Int     @default(0) @map("recordings_processed")
+  issuesCreated     Int?     @map("issues_created")
+}

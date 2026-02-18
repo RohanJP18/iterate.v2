@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feedback</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.25rem; }
+    p { color: #555; }
+    .box { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin: 1rem 0; background: #fafafa; }
+    button { padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
+    a { color: #0ea5e9; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: white; border-radius: 12px; padding: 1.5rem; min-width: 200px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+    .spinner { width: 40px; height: 40px; margin: 0 auto 0.75rem; border: 3px solid #e5e7eb; border-top-color: #0ea5e9; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .modal-close { margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.875rem; }
+  </style>
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_12Cnvbx4gqr0TBf0r6tQirmzHieX3oot9fylyDGFjpE', {
+      api_host: 'https://us.i.posthog.com',
+      person_profiles: 'always',
+      capture_pageview: true,
+    });
+  </script>
+</head>
+<body>
+  <h1>Feedback</h1>
+  <p>Try the controls below. Your session may be recorded for product improvement.</p>
+
+  <div class="box">
+    <p>Interact with the page:</p>
+    <button type="button" onclick="alert('Thanks!')">Click me</button>
+    <button type="button" onclick="document.querySelector('.counter').textContent = Number(document.querySelector('.counter').textContent) + 1">Count: <span class="counter">0</span></button>
+    <a href="#form">Next section</a>
+  </div>
+
+  <div id="form" class="box">
+    <p>Preferences</p>
+    <button type="button" id="open-modal-btn">
+      Save preferences
+    </button>
+  </div>
+
+  <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Loading…</p>
+      <button type="button" class="modal-close" id="modal-close">Close</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var overlay = document.getElementById('modal-overlay');
+      var openBtn = document.getElementById('open-modal-btn');
+      var closeBtn = document.getElementById('modal-close');
+      function openModal() {
+        overlay.classList.add('open');
+        overlay.setAttribute('aria-hidden', 'false');
+        new Promise(function() {}).then(function() { overlay.classList.remove('open'); });
+      }
+      function closeModal() {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+      }
+      openBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+    })();
+  </script>
+</body>
+</html>

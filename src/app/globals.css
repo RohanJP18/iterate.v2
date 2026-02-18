@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --charcoal: #2d2d2d;
+  --light-blue: #7dd3fc;
+  --dot-opacity: 0.06;
+}
+
+body {
+  @apply antialiased text-[var(--charcoal)];
+}
+
+.bg-dot-grid {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, var(--dot-opacity)) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+}
