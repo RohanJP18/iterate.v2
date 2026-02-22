@@ -8,11 +8,13 @@ datasource db {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  users     User[]
-  integrations Integration[]
+  id            String         @id @default(cuid())
+  name          String
+  createdAt     DateTime       @default(now())
+  users         User[]
+  integrations  Integration[]
+  conversations Conversation[]
+  uploadedFiles UploadedFile[]
 }
 
 model User {
@@ -123,4 +125,42 @@ model AnalysisRun {
   finishedAt        DateTime? @map("finished_at")
   recordingsProcessed Int     @default(0) @map("recordings_processed")
   issuesCreated     Int?     @map("issues_created")
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  title          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages     Message[]
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  role           String   // "user" | "assistant"
+  content        String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model UploadedFile {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  filename       String
+  mimeType       String   @map("mime_type")
+  filePath       String   @map("file_path")
+  transcript     String?  @db.Text
+  fileSize       Int      @map("file_size")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }

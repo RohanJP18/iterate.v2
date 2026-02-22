@@ -15,7 +15,8 @@ const SYSTEM_PROMPT = `You analyze session recording summaries to find UX bugs a
 Output valid JSON only, no markdown. Use this exact shape:
 {"items":[{"type":"bug"|"feature","title":"short title","description":"what happened and why it's a bug or feature idea","severity":"critical|high|medium|low (for bugs)","timestampSeconds":0,"suggestedFeatureReason":"(only for type feature) why this feature would help"}]}
 - For bugs: infer from evidence (e.g. console errors, long duration with few clicks = possible stuck UI). Use severity "critical" for blocking issues (e.g. modal never loads, form rejects valid input).
-- When a Timeline is provided (lines like "Ns: event_type"), use those times in seconds to set timestampSeconds for when the bug is visible. If no Timeline, use 0 or infer from context.
+- You will receive a Session summary and one or more "Context around [time]s" blocks. Each block lists events (clicks, inputs, console logs, DOM mutations) in order with timestamps like "45.2s: ...". Use the exact timestamps (in seconds) from these lines to set timestampSeconds for when the bug is visible. For console errors, use the timestamp of the log/error line. Never use 0 when a specific time is given in the context.
+- When only a Timeline is provided (lines like "Ns: event_type") without Context blocks, use those N values in seconds for timestampSeconds. If no Timeline and no Context, use 0.
 - For features: only suggest if the session strongly implies a need. Use timestampSeconds 0 if no specific moment.
 - If nothing clearly wrong or no feature suggested, return {"items":[]}.`;
 

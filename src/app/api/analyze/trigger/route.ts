@@ -6,7 +6,10 @@ import { decrypt } from "@/lib/encrypt";
 import { buildSessionStory, buildSessionStoryWithTimeline } from "@/lib/session-summary";
 import { analyzeSessionStory } from "@/lib/analyze";
 import { posthogSnapshotSources, posthogSnapshotBlob } from "@/lib/posthog";
-import { parseJSONL, buildTimelineFromSnapshotEvents } from "@/lib/rrweb-timeline";
+import { parseJSONL, buildTimelineFromSnapshotEvents, normalizeRRWebEvents } from "@/lib/rrweb-timeline";
+import { detectCriticalMoments } from "@/lib/analysis/critical-moments";
+import { buildEnrichedContext } from "@/lib/analysis/enrich-context";
+import type { RRWebEvent } from "@/lib/analysis/types";
 import { getEmbedding, findSimilarIssue } from "@/lib/embeddings";
 
 export async function POST() {
@@ -61,23 +64,82 @@ export async function POST() {
           allEvents.push(...events);
         }
         if (allEvents.length > 0) {
-          const timeline = buildTimelineFromSnapshotEvents(allEvents);
-          analysisPayload = buildSessionStoryWithTimeline(
-            {
+          try {
+            const typedEvents = normalizeRRWebEvents(allEvents) as RRWebEvent[];
+            const baseTs = (typedEvents[0]?.timestamp as number) ?? 0;
+            const normalizedEvents: RRWebEvent[] = typedEvents.map((ev) => {
+              const t = (ev.timestamp ?? baseTs) as number;
+              return { ...ev, timestamp: t - baseTs };
+            });
+            const firstTs = 0;
+            if (typedEvents.length > 0 && baseTs === 0) {
+              const raw = allEvents[0] as Record<string, unknown> | null;
+              console.log("[analyze/trigger] Raw event keys (first event had no timestamp; normalizer may need more mappings)", {
+                recordingId: rec.id,
+                rawKeys: raw && typeof raw === "object" ? Object.keys(raw) : [],
+              });
+            }
+            console.log("[analyze/trigger] Pipeline input", {
+              recordingId: rec.id,
               durationSeconds: rec.durationSeconds,
-              metadata: rec.metadata as Record<string, unknown> | null,
-              startedAt: rec.startedAt,
-            },
-            timeline
-          );
+              baseTs,
+              firstEventTs: typedEvents[0]?.timestamp,
+              firstEventType: typedEvents[0]?.type,
+              sampleTimestamps: typedEvents.slice(0, 5).map((e) => e.timestamp),
+            });
+            const criticalMoments = detectCriticalMoments(
+              normalizedEvents,
+              firstTs,
+              rec.durationSeconds
+            );
+            const meta = (rec.metadata ?? {}) as Record<string, unknown>;
+            const { enriched, sessionSummary } = buildEnrichedContext(
+              normalizedEvents,
+              criticalMoments,
+              firstTs,
+              { windowSeconds: 15, maxEventsPerWindow: 80 },
+              {
+                durationSeconds: rec.durationSeconds,
+                click_count: meta.click_count as number | undefined,
+                keypress_count: meta.keypress_count as number | undefined,
+                console_error_count: meta.console_error_count as number | undefined,
+                console_warn_count: meta.console_warn_count as number | undefined,
+              }
+            );
+            const contextBlocks = enriched.map(
+              (e) =>
+                `Context around ${(e.momentTimestampMs / 1000).toFixed(1)}s:\n${e.contextText}`
+            );
+            analysisPayload = [sessionSummary, ...contextBlocks].join("\n\n");
+            console.log("[analyze/trigger] New pipeline used", {
+              recordingId: rec.id,
+              eventCount: allEvents.length,
+              momentCount: criticalMoments.length,
+              firstContextEventCount: enriched[0] ? (enriched[0].contextText.startsWith("(no events") ? 0 : enriched[0].contextText.split("\n").length) : undefined,
+              payloadPreview: analysisPayload.slice(0, 200) + (analysisPayload.length > 200 ? "..." : ""),
+            });
+          } catch (err) {
+            console.log("[analyze/trigger] Fallback (enrich failed) for recording", rec.id, err);
+            const timeline = buildTimelineFromSnapshotEvents(allEvents);
+            analysisPayload = buildSessionStoryWithTimeline(
+              {
+                durationSeconds: rec.durationSeconds,
+                metadata: rec.metadata as Record<string, unknown> | null,
+                startedAt: rec.startedAt,
+              },
+              timeline
+            );
+          }
         } else {
+          console.log("[analyze/trigger] No snapshot events for recording", rec.id, "- using metadata only");
           analysisPayload = buildSessionStory({
             durationSeconds: rec.durationSeconds,
             metadata: rec.metadata as Record<string, unknown> | null,
             startedAt: rec.startedAt,
           });
         }
-      } catch {
+      } catch (err) {
+        console.log("[analyze/trigger] Fallback (blob fetch failed) for recording", rec.id, err);
         analysisPayload = buildSessionStory({
           durationSeconds: rec.durationSeconds,
           metadata: rec.metadata as Record<string, unknown> | null,
@@ -85,6 +147,7 @@ export async function POST() {
         });
       }
     } else {
+      console.log("[analyze/trigger] No PostHog config - using metadata only for recording", rec.id);
       analysisPayload = buildSessionStory({
         durationSeconds: rec.durationSeconds,
         metadata: rec.metadata as Record<string, unknown> | null,
@@ -128,6 +191,13 @@ export async function POST() {
       }
 
       if (existingId) {
+        const snippet = item.description.slice(0, 200);
+        console.log("[analyze/trigger] IssueSession upsert", {
+          recordingId: rec.id,
+          issueId: existingId,
+          timestampSeconds: item.timestampSeconds,
+          snippetPreview: snippet.slice(0, 80) + (snippet.length > 80 ? "..." : ""),
+        });
         await prisma.issueSession.upsert({
           where: {
             issueId_sessionRecordingId: {
@@ -139,11 +209,11 @@ export async function POST() {
             issueId: existingId,
             sessionRecordingId: rec.id,
             timestampSeconds: item.timestampSeconds,
-            snippet: item.description.slice(0, 200),
+            snippet,
           },
           update: {
             timestampSeconds: item.timestampSeconds,
-            snippet: item.description.slice(0, 200),
+            snippet,
           },
         });
       } else {
@@ -169,12 +239,20 @@ export async function POST() {
         if (embeddingJson) {
           openIssuesWithEmbedding.push({ id: issue.id, embeddingJson });
         }
+        const snippet = item.description.slice(0, 200);
+        console.log("[analyze/trigger] IssueSession create", {
+          recordingId: rec.id,
+          issueId: issue.id,
+          title: item.title.slice(0, 50),
+          timestampSeconds: item.timestampSeconds,
+          snippetPreview: snippet.slice(0, 80) + (snippet.length > 80 ? "..." : ""),
+        });
         await prisma.issueSession.create({
           data: {
             issueId: issue.id,
             sessionRecordingId: rec.id,
             timestampSeconds: item.timestampSeconds,
-            snippet: item.description.slice(0, 200),
+            snippet,
           },
         });
         issuesCreated++;

@@ -119,7 +119,7 @@ export default function IssuesPage() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex items-center gap-2">
         <svg className="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -266,7 +266,7 @@ export default function IssuesPage() {
                         <li key={s.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
                           <div>
                             <span className="text-sm text-gray-600">
-                              Session at {formatTimestamp(s.timestampSeconds)}
+                              Session at {s.timestampSeconds > 0 ? formatTimestamp(s.timestampSeconds) : "start"}
                             </span>
                             {s.snippet && (
                               <p className="text-xs text-gray-500 mt-1 line-clamp-1">{s.snippet}</p>
@@ -283,7 +283,7 @@ export default function IssuesPage() {
                             }
                             className="shrink-0 rounded-lg bg-charcoal px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
                           >
-                            View recording at {formatTimestamp(s.timestampSeconds)}
+                            View recording{s.timestampSeconds > 0 ? ` at ${formatTimestamp(s.timestampSeconds)}` : ""}
                           </button>
                         </li>
                       );
