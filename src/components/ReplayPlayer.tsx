@@ -6,6 +6,8 @@ import "rrweb/dist/replay/rrweb-replay.css";
 type ReplayPlayerProps = {
   sessionRecordingId: string;
   timestampSeconds: number;
+  beforeSeconds?: number;
+  afterSeconds?: number;
   posthogUrl?: string | null;
   onClose?: () => void;
 };
@@ -13,17 +15,20 @@ type ReplayPlayerProps = {
 export function ReplayPlayer({
   sessionRecordingId,
   timestampSeconds,
+  beforeSeconds = 2,
+  afterSeconds = 2,
   posthogUrl,
   onClose,
 }: ReplayPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const replayerRef = useRef<unknown>(null);
+  const replayerRef = useRef<{ getCurrentTime: () => number; pause: () => void; destroy?: () => void } | null>(null);
   const [status, setStatus] = useState<"loading" | "playing" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
     if (!containerRef.current) return;
     let mounted = true;
+    let stopCheckInterval: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
       try {
@@ -46,7 +51,19 @@ export function ReplayPlayer({
           skipInactive: true,
         });
         replayerRef.current = replayer;
-        replayer.play(Math.max(0, timestampSeconds * 1000));
+
+        const startMs = Math.max(0, (timestampSeconds - beforeSeconds) * 1000);
+        const endMs = (timestampSeconds + afterSeconds) * 1000;
+        replayer.play(startMs);
+
+        stopCheckInterval = setInterval(() => {
+          if (!mounted || !replayerRef.current) return;
+          if (replayer.getCurrentTime() >= endMs) {
+            replayer.pause();
+            if (stopCheckInterval) clearInterval(stopCheckInterval);
+          }
+        }, 100);
+
         if (mounted) setStatus("playing");
       } catch (e) {
         if (mounted) {
@@ -58,10 +75,11 @@ export function ReplayPlayer({
 
     return () => {
       mounted = false;
-      const r = replayerRef.current as { destroy?: () => void } | null;
+      if (stopCheckInterval) clearInterval(stopCheckInterval);
+      const r = replayerRef.current;
       if (r?.destroy) r.destroy();
     };
-  }, [sessionRecordingId, timestampSeconds]);
+  }, [sessionRecordingId, timestampSeconds, beforeSeconds, afterSeconds]);
 
   return (
     <div className="flex flex-col h-full">

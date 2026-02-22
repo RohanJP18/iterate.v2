@@ -7,9 +7,9 @@ import { buildSessionStory, buildSessionStoryWithTimeline } from "@/lib/session-
 import { analyzeSessionStory } from "@/lib/analyze";
 import { posthogSnapshotSources, posthogSnapshotBlob } from "@/lib/posthog";
 import { parseJSONL, buildTimelineFromSnapshotEvents, normalizeRRWebEvents } from "@/lib/rrweb-timeline";
-import { detectCriticalMoments } from "@/lib/analysis/critical-moments";
+import { detectCriticalMoments, getCategoryForTimestamp } from "@/lib/analysis/critical-moments";
 import { buildEnrichedContext } from "@/lib/analysis/enrich-context";
-import type { RRWebEvent } from "@/lib/analysis/types";
+import type { RRWebEvent, CriticalMoment } from "@/lib/analysis/types";
 import { getEmbedding, findSimilarIssue } from "@/lib/embeddings";
 
 export async function POST() {
@@ -51,6 +51,7 @@ export async function POST() {
   for (const rec of recordings) {
     console.log("[analyze/trigger] Processing recording", { recordingId: rec.id, posthogRecordingId: rec.posthogRecordingId });
     let analysisPayload: string;
+    let criticalMoments: CriticalMoment[] = [];
     if (posthogConfig) {
       try {
         const sources = await posthogSnapshotSources(posthogConfig, rec.posthogRecordingId);
@@ -87,7 +88,7 @@ export async function POST() {
               firstEventType: typedEvents[0]?.type,
               sampleTimestamps: typedEvents.slice(0, 5).map((e) => e.timestamp),
             });
-            const criticalMoments = detectCriticalMoments(
+            criticalMoments = detectCriticalMoments(
               normalizedEvents,
               firstTs,
               rec.durationSeconds
@@ -224,6 +225,7 @@ export async function POST() {
         } catch {
           // leave null
         }
+        const category = getCategoryForTimestamp(item.timestampSeconds, criticalMoments);
         const issue = await prisma.issue.create({
           data: {
             organizationId: orgId,
@@ -231,6 +233,7 @@ export async function POST() {
             description: item.description,
             severity: (item.severity ?? "medium").toLowerCase(),
             status: "open",
+            category,
             firstDetectedAt: new Date(),
             suggestedFeature: item.suggestedFeatureReason ?? null,
             embeddingJson,

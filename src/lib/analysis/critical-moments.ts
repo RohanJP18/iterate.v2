@@ -1,6 +1,27 @@
 import type { RRWebEvent, CriticalMoment } from "./types";
 import { MOMENT_PRIORITY } from "./types";
 
+const CATEGORY_MATCH_WINDOW_MS = 15_000;
+
+export function getCategoryForTimestamp(
+  timestampSeconds: number,
+  moments: CriticalMoment[]
+): string {
+  const tsMs = timestampSeconds * 1000;
+  let best: CriticalMoment | null = null;
+  let bestDelta = CATEGORY_MATCH_WINDOW_MS + 1;
+  for (const m of moments) {
+    const reason = m.reason ?? m.kind;
+    if (reason === "session_start" || reason === "session_end") continue;
+    const delta = Math.abs(m.timestampMs - tsMs);
+    if (delta <= CATEGORY_MATCH_WINDOW_MS && delta < bestDelta) {
+      bestDelta = delta;
+      best = m;
+    }
+  }
+  return best ? (best.reason ?? best.kind) : "other";
+}
+
 const RAGE_WINDOW_MS = 2000;
 const RAGE_MIN_CLICKS = 3;
 const LONG_PAUSE_MS = 30_000;

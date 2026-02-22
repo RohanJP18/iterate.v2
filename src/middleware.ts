@@ -5,5 +5,5 @@ export default withAuth({
 });
 
 export const config = {
-  matcher: ["/", "/issues", "/feature-gen", "/integration", "/settings"],
+  matcher: ["/", "/issues", "/feature-gen", "/prd", "/integration", "/settings"],
 };

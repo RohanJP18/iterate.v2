@@ -15,6 +15,7 @@ model Organization {
   integrations  Integration[]
   conversations Conversation[]
   uploadedFiles UploadedFile[]
+  prdDrafts     PRDDraft[]
 }
 
 model User {
@@ -96,6 +97,7 @@ model Issue {
   description     String   @db.Text
   severity        String   // critical, high, medium, low
   status          String   // open, resolved
+  category        String?  // console_error, repeated_clicks, long_pause, console_log, other (from critical moments)
   firstDetectedAt DateTime @map("first_detected_at")
   suggestedFeature String? @map("suggested_feature") @db.Text
   embeddingJson   String?  @map("embedding_json") @db.Text
@@ -136,6 +138,36 @@ model Conversation {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   messages     Message[]
+  prdDraftsSeeded PRDDraft[] @relation("SeedConversation")
+}
+
+model PRDDraft {
+  id                   String    @id @default(cuid())
+  organizationId       String    @map("organization_id")
+  title                String
+  content              Json      // structured PRD schema
+  seedConversationId   String?   @map("seed_conversation_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  seedConversation     Conversation? @relation("SeedConversation", fields: [seedConversationId], references: [id], onDelete: SetNull)
+  messages             PRDMessage[]
+
+  @@index([organizationId])
+  @@index([seedConversationId])
+}
+
+model PRDMessage {
+  id          String   @id @default(cuid())
+  prdDraftId  String   @map("prd_draft_id")
+  role        String   // "user" | "assistant"
+  content     String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  draft PRDDraft @relation(fields: [prdDraftId], references: [id], onDelete: Cascade)
+
+  @@index([prdDraftId])
 }
 
 model Message {

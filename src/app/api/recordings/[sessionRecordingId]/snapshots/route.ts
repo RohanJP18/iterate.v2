@@ -1,34 +1,10 @@
 import { NextResponse } from "next/server";
-import { gunzipSync } from "zlib";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/encrypt";
 import { posthogSnapshotSources, posthogSnapshotBlob } from "@/lib/posthog";
-import { parseJSONL, normalizeRRWebEvents } from "@/lib/rrweb-timeline";
-
-const GZIP_MAGIC = [0x1f, 0x8b];
-
-function decompressGzipDataIfNeeded(allEvents: unknown[]): void {
-  for (const ev of allEvents) {
-    const o = Array.isArray(ev) && ev.length >= 2 ? (ev as unknown[])[1] : ev;
-    if (o === null || typeof o !== "object") continue;
-    const event = o as Record<string, unknown>;
-    const t = event.type ?? event.t;
-    if (t !== 2 && t !== "2") continue;
-    let data = event.data ?? event.d ?? event.payload ?? event.p;
-    if (typeof data !== "string" || data.length < 2) continue;
-    if (data.charCodeAt(0) !== GZIP_MAGIC[0] || data.charCodeAt(1) !== GZIP_MAGIC[1]) continue;
-    try {
-      const buf = Buffer.from(data, "latin1");
-      const decompressed = gunzipSync(buf);
-      const parsed = JSON.parse(decompressed.toString("utf-8")) as unknown;
-      event.data = parsed;
-    } catch {
-      // leave data unchanged on decompress/parse failure
-    }
-  }
-}
+import { parseJSONL, normalizeRRWebEvents, decompressGzipDataIfNeeded } from "@/lib/rrweb-timeline";
 
 export async function GET(
   _req: Request,

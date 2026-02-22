@@ -9,9 +9,15 @@ type IssueListItem = {
   description: string;
   severity: string;
   status: string;
+  category?: string | null;
   firstDetectedAt: string;
   suggestedFeature: string | null;
   affectedCount: number;
+};
+
+type IssueGroup = {
+  id: string;
+  issues: IssueListItem[];
 };
 
 type IssueDetail = IssueListItem & {
@@ -48,23 +54,21 @@ function formatTimestamp(seconds: number): string {
 }
 
 export default function IssuesPage() {
-  const [filter, setFilter] = useState<"critical" | "all" | "resolved">("critical");
-  const [issues, setIssues] = useState<IssueListItem[]>([]);
+  const [filter, setFilter] = useState<"all" | "resolved">("all");
+  const [groups, setGroups] = useState<IssueGroup[]>([]);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<IssueDetail | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [integration, setIntegration] = useState<IntegrationStatus | null>(null);
 
-  const [counts, setCounts] = useState({ critical: 0, all: 0, resolved: 0 });
+  const [counts, setCounts] = useState({ all: 0, resolved: 0 });
   const [replayModal, setReplayModal] = useState<{
     sessionRecordingId: string;
     timestampSeconds: number;
     posthogUrl: string | null;
   } | null>(null);
-  const criticalCount = counts.critical;
-  const allCount = counts.all;
-  const resolvedCount = counts.resolved;
 
   useEffect(() => {
     fetch("/api/integration/posthog")
@@ -78,12 +82,15 @@ export default function IssuesPage() {
     fetch(`/api/issues?filter=${filter}`)
       .then((r) => r.json())
       .then((data) => {
-        setIssues(data.issues ?? []);
+        const nextGroups = data.groups ?? [];
+        setGroups(nextGroups);
         if (data.counts) setCounts(data.counts);
-        if (!selectedId && (data.issues?.length ?? 0) > 0) setSelectedId(data.issues[0].id);
-        else if (data.issues?.length === 0) setSelectedId(null);
+        const firstIssueId = nextGroups.length > 0 && nextGroups[0].issues.length > 0
+          ? nextGroups[0].issues[0].id
+          : null;
+        setSelectedId(firstIssueId);
       })
-      .catch(() => setIssues([]))
+      .catch(() => setGroups([]))
       .finally(() => setLoadingList(false));
   }, [filter]);
 
@@ -108,7 +115,12 @@ export default function IssuesPage() {
       body: JSON.stringify({ status: "resolved" }),
     });
     setDetail((d) => (d ? { ...d, status: "resolved" } : null));
-    setIssues((prev) => prev.map((i) => (i.id === detail.id ? { ...i, status: "resolved" } : i)));
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        issues: g.issues.map((i) => (i.id === detail.id ? { ...i, status: "resolved" } : i)),
+      }))
+    );
   }
 
   const getRecordingUrl = (posthogRecordingId: string, timestampSeconds: number) => {
@@ -127,7 +139,7 @@ export default function IssuesPage() {
         <h1 className="text-lg font-semibold text-charcoal">Issues</h1>
       </div>
       <div className="mb-4 flex gap-2">
-        {(["critical", "all", "resolved"] as const).map((f) => (
+        {(["all", "resolved"] as const).map((f) => (
           <button
             key={f}
             type="button"
@@ -138,9 +150,8 @@ export default function IssuesPage() {
                 : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
             }`}
           >
-            {f === "critical" && `Critical (${criticalCount})`}
-            {f === "all" && `All (${allCount})`}
-            {f === "resolved" && `Resolved (${resolvedCount})`}
+            {f === "all" && `All (${counts.all})`}
+            {f === "resolved" && `Resolved (${counts.resolved})`}
           </button>
         ))}
       </div>
@@ -148,45 +159,78 @@ export default function IssuesPage() {
       <div className="flex flex-1 min-h-0 gap-4">
         <div className="w-96 shrink-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden">
           <div className="border-b border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-            {filter === "critical" && `Critical issues (${issues.length})`}
-            {filter === "all" && `All issues (${issues.length})`}
-            {filter === "resolved" && `Resolved (${issues.length})`}
+            {filter === "all" && `Issue groups (${groups.length})`}
+            {filter === "resolved" && `Resolved (${groups.length})`}
           </div>
           <div className="flex-1 overflow-y-auto">
             {loadingList ? (
               <div className="p-4 text-sm text-gray-500">Loading...</div>
-            ) : issues.length === 0 ? (
+            ) : groups.length === 0 ? (
               <div className="p-4 text-sm text-gray-500">No issues</div>
             ) : (
-              issues.map((issue) => (
-                <button
-                  key={issue.id}
-                  type="button"
-                  onClick={() => setSelectedId(issue.id)}
-                  className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${
-                    selectedId === issue.id ? "bg-gray-100" : ""
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <svg className="h-4 w-4 shrink-0 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-charcoal truncate">{issue.title}</div>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${
-                          issue.severity === "critical" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-700"
-                        }`}>
-                          {issue.severity}
-                        </span>
-                        <span className="text-xs text-gray-500">{issue.affectedCount} sessions</span>
-                        <span className="text-xs text-gray-400">{formatTimeAgo(issue.firstDetectedAt)}</span>
+              groups.map((group) => {
+                const first = group.issues[0];
+                const totalSessions = group.issues.reduce((s, i) => s + i.affectedCount, 0);
+                const isExpanded = expandedGroupId === group.id;
+                return (
+                  <div key={group.id} className="border-b border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedGroupId((id) => (id === group.id ? null : group.id))}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-start gap-2"
+                    >
+                      <span className="shrink-0 text-gray-400 mt-0.5">
+                        {isExpanded ? (
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <svg className="h-4 w-4 shrink-0 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-charcoal truncate">
+                          {group.issues.length > 1 ? `${first.title} (${group.issues.length} similar)` : first.title}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            first.severity === "critical" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-700"
+                          }`}>
+                            {first.severity}
+                          </span>
+                          <span className="text-xs text-gray-500">{totalSessions} sessions</span>
+                          <span className="text-xs text-gray-400">{formatTimeAgo(first.firstDetectedAt)}</span>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{issue.description}</p>
-                    </div>
+                    </button>
+                    {isExpanded && (
+                      <div className="bg-gray-50/80 pl-4 pr-2 pb-2">
+                        {group.issues.map((issue) => (
+                          <button
+                            key={issue.id}
+                            type="button"
+                            onClick={() => setSelectedId(issue.id)}
+                            className={`w-full text-left px-3 py-2 rounded-lg border border-transparent hover:bg-white hover:border-gray-200 ${
+                              selectedId === issue.id ? "bg-white border-gray-200" : ""
+                            }`}
+                          >
+                            <div className="font-medium text-sm text-charcoal truncate">{issue.title}</div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-gray-500">{issue.affectedCount} sessions</span>
+                              <span className="text-xs text-gray-400">{formatTimeAgo(issue.firstDetectedAt)}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </button>
-              ))
+                );
+              })
             )}
           </div>
         </div>

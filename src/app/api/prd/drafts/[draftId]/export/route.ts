@@ -1,0 +1,39 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { ensurePRDContent } from "@/lib/prd-schema";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ draftId: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  const orgId = (session?.user as { organizationId?: string } | undefined)?.organizationId;
+  if (!orgId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { draftId } = await params;
+  const draft = await prisma.pRDDraft.findFirst({
+    where: { id: draftId, organizationId: orgId },
+  });
+  if (!draft) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const content = ensurePRDContent(draft.content);
+  const payload = {
+    title: draft.title,
+    exportedAt: new Date().toISOString(),
+    ...content,
+  };
+
+  return new NextResponse(JSON.stringify(payload, null, 2), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Disposition": `attachment; filename="prd-${draftId}.json"`,
+    },
+  });
+}

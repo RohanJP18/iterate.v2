@@ -48,3 +48,58 @@ export function findSimilarIssue(
   }
   return null;
 }
+
+const DEFAULT_GROUP_THRESHOLD = 0.85;
+
+function parseEmbedding(embeddingJson: string | null): number[] | null {
+  if (!embeddingJson) return null;
+  try {
+    const vec = JSON.parse(embeddingJson) as unknown;
+    if (!Array.isArray(vec) || vec.length !== EMBEDDING_DIMS) return null;
+    return vec as number[];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Groups issues by embedding similarity. Greedy: first issue starts group 0;
+ * each next issue joins the first group with max similarity >= threshold, or starts a new group.
+ * Issues without a valid embedding become their own single-issue group.
+ */
+export function groupIssuesByEmbedding<T extends { id: string; embeddingJson: string | null }>(
+  issues: T[],
+  threshold: number = DEFAULT_GROUP_THRESHOLD
+): T[][] {
+  if (issues.length === 0) return [];
+  const groups: T[][] = [];
+  const groupRepEmbeddings: number[][] = [];
+
+  for (const issue of issues) {
+    const embedding = parseEmbedding(issue.embeddingJson);
+    if (embedding === null) {
+      groups.push([issue]);
+      groupRepEmbeddings.push([]);
+      continue;
+    }
+    let bestGroupIndex = -1;
+    let bestSim = threshold - 1;
+    for (let i = 0; i < groups.length; i++) {
+      const rep = groupRepEmbeddings[i];
+      if (rep.length === 0) continue;
+      const sim = cosineSimilarity(embedding, rep);
+      if (sim > bestSim) {
+        bestSim = sim;
+        bestGroupIndex = i;
+      }
+    }
+    if (bestGroupIndex >= 0) {
+      groups[bestGroupIndex].push(issue);
+    } else {
+      groups.push([issue]);
+      groupRepEmbeddings.push(embedding);
+    }
+  }
+
+  return groups;
+}

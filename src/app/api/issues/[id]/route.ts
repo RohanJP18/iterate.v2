@@ -54,6 +54,7 @@ export async function GET(
     description: issue.description,
     severity: issue.severity,
     status: issue.status,
+    category: issue.category,
     firstDetectedAt: issue.firstDetectedAt.toISOString(),
     suggestedFeature: issue.suggestedFeature,
     createdAt: issue.createdAt.toISOString(),

@@ -1,5 +1,33 @@
+import { gunzipSync } from "zlib";
+
 const MAX_EVENTS = 100;
 const MAX_CHARS = 8000;
+const GZIP_MAGIC = [0x1f, 0x8b];
+
+/**
+ * Decompress gzip-compressed full-snapshot (type 2) event data in place.
+ * PostHog blob_v2 can return string data that is gzip binary; rrweb needs parsed object.
+ */
+export function decompressGzipDataIfNeeded(allEvents: unknown[]): void {
+  for (const ev of allEvents) {
+    const o = Array.isArray(ev) && ev.length >= 2 ? (ev as unknown[])[1] : ev;
+    if (o === null || typeof o !== "object") continue;
+    const event = o as Record<string, unknown>;
+    const t = event.type ?? event.t;
+    if (t !== 2 && t !== "2") continue;
+    const data = event.data ?? event.d ?? event.payload ?? event.p;
+    if (typeof data !== "string" || data.length < 2) continue;
+    if (data.charCodeAt(0) !== GZIP_MAGIC[0] || data.charCodeAt(1) !== GZIP_MAGIC[1]) continue;
+    try {
+      const buf = Buffer.from(data, "latin1");
+      const decompressed = gunzipSync(buf);
+      const parsed = JSON.parse(decompressed.toString("utf-8")) as unknown;
+      event.data = parsed;
+    } catch {
+      // leave data unchanged on decompress/parse failure
+    }
+  }
+}
 
 export type RRWebEvent = {
   type?: number;

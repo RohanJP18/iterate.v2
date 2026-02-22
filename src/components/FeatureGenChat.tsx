@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 type Message = {
   id: string;
@@ -21,6 +22,7 @@ type AttachedFile = {
 };
 
 export function FeatureGenChat() {
+  const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -28,6 +30,7 @@ export function FeatureGenChat() {
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [sendingToPrd, setSendingToPrd] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -170,16 +173,34 @@ export function FeatureGenChat() {
     setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
+  const handleSendToPRD = async () => {
+    if (!currentConversationId || messages.length === 0) return;
+    setSendingToPrd(true);
+    try {
+      const res = await fetch("/api/prd/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: currentConversationId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Failed to create PRD draft");
+      if (data.draftId) router.push(`/prd?draftId=${data.draftId}`);
+    } catch {
+      setSendingToPrd(false);
+    }
+  };
+
   return (
     <div className="flex flex-1 min-h-0 max-w-3xl mx-auto w-full rounded-xl border border-gray-200 bg-white flex-col overflow-hidden">
-      <div className="flex border-b border-gray-200 shrink-0">
-        <button
-          type="button"
-          onClick={handleNewConversation}
-          className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-charcoal"
-        >
-          New chat
-        </button>
+      <div className="flex border-b border-gray-200 shrink-0 items-center justify-between">
+        <div className="flex">
+          <button
+            type="button"
+            onClick={handleNewConversation}
+            className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-charcoal"
+          >
+            New chat
+          </button>
         {conversations.length > 0 && (
           <div className="flex gap-1 p-2 overflow-x-auto">
             {conversations.slice(0, 10).map((c) => (
@@ -197,6 +218,17 @@ export function FeatureGenChat() {
               </button>
             ))}
           </div>
+        )}
+        </div>
+        {currentConversationId && messages.length > 0 && (
+          <button
+            type="button"
+            onClick={handleSendToPRD}
+            disabled={sendingToPrd}
+            className="shrink-0 mx-2 rounded-lg border border-[#0ea5e9] bg-[#7dd3fc]/20 px-3 py-2 text-sm font-medium text-[#0ea5e9] hover:bg-[#7dd3fc]/30 disabled:opacity-50"
+          >
+            {sendingToPrd ? "Sending…" : "Send to PRD Generator"}
+          </button>
         )}
       </div>
 
