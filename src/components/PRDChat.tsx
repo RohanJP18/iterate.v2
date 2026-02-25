@@ -13,10 +13,12 @@ type PRDChatProps = {
   draftId: string | null;
   messages: PRDMessage[];
   onMessagesUpdate: (messages: PRDMessage[]) => void;
-  onContentUpdate: (content: object) => void;
+  onContentUpdate?: (content: object) => void;
+  currentCanvasMarkdown?: string;
+  onDocUpdate?: (doc: string | null) => void;
 };
 
-export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate }: PRDChatProps) {
+export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate, currentCanvasMarkdown = "", onDocUpdate }: PRDChatProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -42,7 +44,7 @@ export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate }
       const res = await fetch(`/api/prd/drafts/${draftId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, currentCanvasMarkdown }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -50,8 +52,11 @@ export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate }
       }
       const newMessages = data.messages ?? [];
       onMessagesUpdate([...messages.filter((m) => !m.id.startsWith("temp-")), ...newMessages]);
+      if (data.updatedDoc != null) {
+        onDocUpdate?.(data.updatedDoc);
+      }
       if (data.content) {
-        onContentUpdate(data.content);
+        onContentUpdate?.(data.content);
       }
     } catch (e) {
       onMessagesUpdate(messages.filter((m) => m.id !== userMsg.id));
@@ -77,12 +82,11 @@ export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate }
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Ask the agent to add or refine sections of the PRD. For example: &quot;Add a user story for login&quot; or
-            &quot;Expand the API contracts for the checkout flow.&quot;
+            Ask discovery questions, then say &quot;Draft it&quot; or click Generate PRD to create the document.
           </p>
         ) : (
           messages.map((m) => (

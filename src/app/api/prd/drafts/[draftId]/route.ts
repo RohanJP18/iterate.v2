@@ -27,6 +27,7 @@ export async function GET(
     id: draft.id,
     title: draft.title,
     content: ensurePRDContent(draft.content),
+    markdownContent: draft.markdownContent ?? null,
     seedConversationId: draft.seedConversationId,
     createdAt: draft.createdAt.toISOString(),
     updatedAt: draft.updatedAt.toISOString(),
@@ -51,24 +52,26 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  let body: { title?: string; content?: object };
+  let body: { title?: string; content?: object; markdownContent?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const data: { title?: string; content?: object } = {};
+  const data: { title?: string; content?: object; markdownContent?: string } = {};
   if (typeof body.title === "string") data.title = body.title;
   if (body.content !== undefined && body.content !== null && typeof body.content === "object") {
     data.content = body.content;
   }
+  if (typeof body.markdownContent === "string") data.markdownContent = body.markdownContent;
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({
       id: existing.id,
       title: existing.title,
       content: ensurePRDContent(existing.content),
+      markdownContent: existing.markdownContent ?? null,
       updatedAt: existing.updatedAt.toISOString(),
     });
   }
@@ -82,6 +85,7 @@ export async function PATCH(
     id: draft.id,
     title: draft.title,
     content: ensurePRDContent(draft.content),
+    markdownContent: draft.markdownContent ?? null,
     updatedAt: draft.updatedAt.toISOString(),
   });
 }

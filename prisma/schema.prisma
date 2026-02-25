@@ -146,6 +146,7 @@ model PRDDraft {
   organizationId       String    @map("organization_id")
   title                String
   content              Json      // structured PRD schema
+  markdownContent      String?   @db.Text @map("markdown_content")
   seedConversationId   String?   @map("seed_conversation_id")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")

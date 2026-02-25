@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ensurePRDContent } from "@/lib/prd-schema";
-import { generatePRDResponse } from "@/lib/prd-agent";
-import type { PRDContent } from "@/lib/prd-schema";
+import { generatePRDArchitectResponse } from "@/lib/prd-architect-agent";
 
 export async function POST(
   req: Request,
@@ -27,7 +25,7 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  let body: { message?: string };
+  let body: { message?: string; currentCanvasMarkdown?: string };
   try {
     body = await req.json();
   } catch {
@@ -38,24 +36,24 @@ export async function POST(
     return NextResponse.json({ error: "Message required" }, { status: 400 });
   }
 
-  const currentContent = ensurePRDContent(draft.content) as PRDContent;
+  const currentCanvasMarkdown =
+    typeof body.currentCanvasMarkdown === "string" ? body.currentCanvasMarkdown : (draft.markdownContent ?? "");
+
   const conversationHistory = draft.messages.map((m) => ({ role: m.role, content: m.content }));
 
   let assistantMessage: string;
-  let updatedContent: PRDContent = currentContent;
+  let updatedDoc: string | null = null;
 
   try {
-    const result = await generatePRDResponse({
+    const result = await generatePRDArchitectResponse({
       userMessage: message,
       conversationHistory,
-      currentPRDContent: currentContent,
+      currentCanvasMarkdown,
     });
     assistantMessage = result.assistantMessage;
-    if (result.updatedPRDContent) {
-      updatedContent = result.updatedPRDContent;
-    }
+    updatedDoc = result.updatedDoc;
   } catch (e) {
-    console.error("PRD agent error:", e);
+    console.error("PRD architect agent error:", e);
     return NextResponse.json(
       { error: "AI request failed. Check OPENAI_API_KEY and try again." },
       { status: 500 }
@@ -71,10 +69,12 @@ export async function POST(
     }),
   ]);
 
-  await prisma.pRDDraft.update({
-    where: { id: draftId },
-    data: { content: updatedContent as object },
-  });
+  if (updatedDoc !== null) {
+    await prisma.pRDDraft.update({
+      where: { id: draftId },
+      data: { markdownContent: updatedDoc },
+    });
+  }
 
   return NextResponse.json({
     messages: [
@@ -91,6 +91,6 @@ export async function POST(
         createdAt: assistantMsg.createdAt.toISOString(),
       },
     ],
-    content: updatedContent,
+    updatedDoc,
   });
 }

@@ -3,10 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PRDCanvas } from "@/components/PRDCanvas";
 import { PRDChat } from "@/components/PRDChat";
-import { ensurePRDContent } from "@/lib/prd-schema";
-import type { PRDContent } from "@/lib/prd-schema";
+import { PRDDocCanvas } from "@/components/PRDDocCanvas";
 
 type DraftSummary = { id: string; title: string; updatedAt: string };
 type PRDMessage = { id: string; role: string; content: string; createdAt: string };
@@ -18,10 +16,12 @@ export default function PRDPage() {
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [draftId, setDraftId] = useState<string | null>(draftIdParam);
   const [title, setTitle] = useState<string>("");
-  const [content, setContent] = useState<PRDContent>(ensurePRDContent(null));
+  const [markdownContent, setMarkdownContent] = useState<string>("");
   const [messages, setMessages] = useState<PRDMessage[]>([]);
   const [loadingDrafts, setLoadingDrafts] = useState(true);
   const [loadingDraft, setLoadingDraft] = useState(false);
+  const [isStreamingDoc, setIsStreamingDoc] = useState(false);
+  const [streamedContent, setStreamedContent] = useState("");
 
   useEffect(() => {
     setDraftId(draftIdParam);
@@ -39,9 +39,9 @@ export default function PRDPage() {
 
   useEffect(() => {
     if (!draftId) {
-      setContent(ensurePRDContent(null));
       setMessages([]);
       setTitle("");
+      setMarkdownContent("");
       return;
     }
     setLoadingDraft(true);
@@ -55,29 +55,12 @@ export default function PRDPage() {
           return;
         }
         setTitle(draftData.title ?? "");
-        setContent(ensurePRDContent(draftData.content));
+        setMarkdownContent(draftData.markdownContent ?? "");
         setMessages(messagesData.messages ?? []);
       })
       .catch(() => setDraftId(null))
       .finally(() => setLoadingDraft(false));
   }, [draftId]);
-
-  const handleContentChange = useCallback((next: PRDContent) => {
-    setContent(next);
-  }, []);
-
-  const handleSave = useCallback(
-    async (next: PRDContent) => {
-      if (!draftId) return;
-      const res = await fetch(`/api/prd/drafts/${draftId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: next }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-    },
-    [draftId]
-  );
 
   const handleNewBlank = async () => {
     const res = await fetch("/api/prd/drafts", {
@@ -93,6 +76,45 @@ export default function PRDPage() {
     }
   };
 
+  const handleGeneratePRD = useCallback(async () => {
+    if (!draftId) return;
+    setIsStreamingDoc(true);
+    setStreamedContent("");
+    try {
+      const res = await fetch(`/api/prd/drafts/${draftId}/generate-doc`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationHistory: messages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      if (!res.ok || !res.body) {
+        throw new Error("Failed to start generation");
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        accumulated += chunk;
+        setStreamedContent(accumulated);
+      }
+      setMarkdownContent(accumulated);
+      await fetch(`/api/prd/drafts/${draftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdownContent: accumulated }),
+      });
+    } catch (e) {
+      console.error("Generate PRD error:", e);
+    } finally {
+      setIsStreamingDoc(false);
+      setStreamedContent("");
+    }
+  }, [draftId, messages, markdownContent]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
@@ -103,13 +125,23 @@ export default function PRDPage() {
           <h1 className="text-lg font-semibold text-charcoal">PRD Generator</h1>
         </div>
         {draftId && (
-          <a
-            href={`/api/prd/drafts/${draftId}/export`}
-            download={`prd-${draftId}.json`}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Export for CLI
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleGeneratePRD}
+              disabled={isStreamingDoc}
+              className="rounded-lg bg-charcoal px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            >
+              {isStreamingDoc ? "Generating…" : "Generate PRD"}
+            </button>
+            <a
+              href={`/api/prd/drafts/${draftId}/export`}
+              download={`prd-${draftId}.json`}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Export for CLI
+            </a>
+          </div>
         )}
       </div>
       <p className="mb-4 shrink-0 text-sm text-gray-500">
@@ -157,7 +189,7 @@ export default function PRDPage() {
         </div>
       ) : (
         <div className="flex-1 flex min-h-0 gap-4">
-          <div className="w-96 shrink-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="w-96 shrink-0 min-h-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden">
             <div className="border-b border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500">
               Chat
             </div>
@@ -169,24 +201,26 @@ export default function PRDPage() {
                   draftId={draftId}
                   messages={messages}
                   onMessagesUpdate={setMessages}
-                  onContentUpdate={(c) => setContent(ensurePRDContent(c))}
+                  currentCanvasMarkdown={markdownContent}
+                  onDocUpdate={(doc) => doc !== null && setMarkdownContent(doc)}
                 />
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="border-b border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-              {title || "PRD Canvas"}
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden">
+            <div className="border-b border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 flex items-center justify-between">
+              <span>{title || "PRD Canvas"}</span>
             </div>
-            <div className="flex-1 min-h-0 overflow-auto">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               {loadingDraft ? (
                 <div className="p-4 text-sm text-gray-500">Loading...</div>
               ) : (
-                <PRDCanvas
-                  content={content}
-                  onChange={handleContentChange}
-                  onSave={handleSave}
+                <PRDDocCanvas
                   draftId={draftId}
+                  initialMarkdown={markdownContent}
+                  onMarkdownChange={setMarkdownContent}
+                  streamedContent={streamedContent}
+                  isStreaming={isStreamingDoc}
                 />
               )}
             </div>
