@@ -10,36 +10,38 @@ export default function SettingsPage() {
     : user?.email?.slice(0, 2).toUpperCase() ?? "?";
 
   return (
-    <div>
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-gray-500 font-mono text-sm">// SETTINGS</h1>
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="mb-6 flex items-center justify-between shrink-0">
+        <h1 className="text-lg font-semibold text-charcoal dark:text-gray-100">Settings</h1>
       </div>
-      <div className="max-w-xl space-y-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="text-base font-semibold text-charcoal">Account</h2>
-          <div className="mt-4 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-[#7dd3fc]/30 flex items-center justify-center text-lg font-medium text-charcoal">
-              {initials}
+      <div className="flex justify-center">
+        <div className="w-full max-w-xl">
+          <div className="rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#252525] p-6">
+            <h2 className="text-base font-semibold text-charcoal dark:text-gray-100">Account</h2>
+            <div className="mt-4 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-lg font-medium text-charcoal dark:text-gray-200">
+                {initials}
+              </div>
+              <div>
+                <div className="font-medium text-charcoal dark:text-gray-100">{user?.name ?? "User"}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</div>
+              </div>
             </div>
-            <div>
-              <div className="font-medium text-charcoal">{user?.name ?? "User"}</div>
-              <div className="text-sm text-gray-500">{user?.email}</div>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                className="rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Account
+              </button>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Sign out
+              </button>
             </div>
-          </div>
-          <div className="mt-6 flex gap-3">
-            <button
-              type="button"
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              ACCOUNT
-            </button>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              SIGN OUT
-            </button>
           </div>
         </div>
       </div>

@@ -97,10 +97,10 @@ export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate, 
               className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[85%] rounded-xl px-4 py-3 text-sm break-words overflow-x-auto ${
+                className={`max-w-[85%] rounded-lg px-4 py-3 text-sm break-words overflow-x-auto ${
                   m.role === "user"
-                    ? "bg-charcoal text-white"
-                    : "bg-gray-100 text-charcoal border border-gray-200"
+                    ? "bg-charcoal dark:bg-gray-600 text-white"
+                    : "bg-gray-50 dark:bg-gray-800 text-charcoal dark:text-gray-100 border border-gray-100 dark:border-gray-700"
                 }`}
               >
                 {m.role === "user" ? (
@@ -116,14 +116,14 @@ export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate, 
         )}
         {loading && (
           <div className="flex justify-start">
-            <div className="rounded-xl bg-gray-100 border border-gray-200 px-4 py-3 text-sm text-gray-500">
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
               Thinking...
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="border-t border-gray-200 p-4 shrink-0">
+      <div className="border-t border-gray-100 dark:border-gray-700 p-4 shrink-0">
         <div className="flex gap-2">
           <textarea
             value={input}
@@ -131,15 +131,14 @@ export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate, 
             onKeyDown={handleKeyDown}
             placeholder="Ask to add or edit PRD sections..."
             rows={2}
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-charcoal placeholder:text-gray-400 focus:border-[#0ea5e9] focus:outline-none focus:ring-1 focus:ring-[#0ea5e9] resize-none"
+            className="flex-1 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 px-4 py-2.5 text-sm text-charcoal dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent resize-none"
             disabled={loading}
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className="shrink-0 flex items-center justify-center w-10 h-10 rounded-lg text-white disabled:opacity-50 hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: "#c75a38" }}
+            className="shrink-0 flex items-center justify-center w-10 h-10 rounded-lg bg-accent text-white disabled:opacity-50 hover:opacity-90 transition-opacity"
             aria-label="Send"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

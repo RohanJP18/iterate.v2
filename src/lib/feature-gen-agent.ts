@@ -19,7 +19,7 @@ Rules:
 - Be specific: reference issue IDs, session counts, error rates from the context.
 - If the data doesn’t support a strong recommendation, say so and suggest what data would help.
 - When customer quotes are provided, use them to support the problem statement or solution.
-- Use markdown for structure (headers, lists, bold). Use the accent color #0ea5e9 only if you need to highlight links or citations.`;
+- Use markdown for structure (headers, lists, bold). Use the product accent color sparingly for links or citations if needed.`;
 
 export type FeatureGenParams = {
   userMessage: string;

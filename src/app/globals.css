@@ -4,12 +4,17 @@
 
 :root {
   --charcoal: #2d2d2d;
-  --light-blue: #7dd3fc;
+  --accent: #c75a38;
+  --accent-muted: rgba(199, 90, 56, 0.12);
   --dot-opacity: 0.06;
 }
 
+.dark {
+  --dot-opacity: 0.15;
+}
+
 body {
-  @apply antialiased text-[var(--charcoal)];
+  @apply bg-[#fafaf9] text-charcoal antialiased transition-colors dark:bg-[#191919] dark:text-gray-100;
 }
 
 .bg-dot-grid {
@@ -19,4 +24,12 @@ body {
     transparent 1px
   );
   background-size: 20px 20px;
+}
+
+.dark .bg-dot-grid {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.06) 1px,
+    transparent 1px
+  );
 }

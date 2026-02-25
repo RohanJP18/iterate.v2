@@ -91,7 +91,7 @@ export function ReplayPlayer({
               href={posthogUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-[#0ea5e9] hover:underline"
+              className="text-xs text-accent hover:underline"
             >
               Open in PostHog
             </a>
@@ -126,7 +126,7 @@ export function ReplayPlayer({
                 href={posthogUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#0ea5e9] hover:underline"
+                className="text-accent hover:underline"
               >
                 Open in PostHog instead
               </a>

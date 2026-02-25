@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const nav = [
@@ -63,37 +65,61 @@ function SettingsIcon({ className }: { className?: string }) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <aside className="w-56 shrink-0 border-r border-gray-200 bg-white flex flex-col">
-      <div className="p-4 border-b border-gray-100">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded bg-[#7dd3fc]/20 text-[#0ea5e9]">
-            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </span>
-          <span className="font-semibold text-charcoal">Iterate</span>
-        </Link>
+    <aside
+      className={`${
+        collapsed ? "w-16" : "w-52"
+      } shrink-0 border-r border-gray-100 dark:border-gray-800 bg-[#f7f7f5] dark:bg-[#252525] flex flex-col transition-[width] duration-200 ease-in-out`}
+    >
+      <div
+        className={`shrink-0 pt-4 pb-3 flex ${
+          collapsed ? "flex-col items-center gap-3" : "items-center justify-between px-3"
+        }`}
+      >
+        <Image
+          src="/logo.png"
+          alt="Solira"
+          width={collapsed ? 32 : 40}
+          height={collapsed ? 32 : 40}
+          className="shrink-0"
+        />
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          className={`rounded-md border border-transparent text-gray-500 hover:text-charcoal dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-200/50 dark:hover:bg-gray-700/60 transition-colors ${
+            collapsed ? "p-1" : "p-1 ml-1"
+          }`}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <svg
+            className={`h-4 w-4 ${collapsed ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
       </div>
-      <nav className="flex-1 p-3 space-y-0.5">
+      <nav className={`flex-1 ${collapsed ? "px-1" : "px-3"} pt-0 space-y-0.5`}>
         {nav.map(({ href, label, icon: Icon }) => {
-          const isActive =
-            href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(href);
+          const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex items-center ${
+                collapsed ? "justify-center px-0" : "gap-3 px-3 justify-start"
+              } rounded-lg py-2.5 text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-[#7dd3fc]/20 text-[#0ea5e9]"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-charcoal"
+                  ? "bg-accent-muted text-accent dark:bg-accent/20 dark:text-accent"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 hover:text-charcoal dark:hover:text-gray-100"
               }`}
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {label}
+              {!collapsed && <span>{label}</span>}
             </Link>
           );
         })}

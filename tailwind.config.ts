@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -8,9 +9,13 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-plus-jakarta)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
+      },
       colors: {
         charcoal: "#2d2d2d",
-        "light-blue": "#7dd3fc",
+        accent: "#c75a38",
+        "accent-muted": "rgba(199, 90, 56, 0.12)",
         "dot-grid": "rgba(0,0,0,0.06)",
       },
       backgroundImage: {

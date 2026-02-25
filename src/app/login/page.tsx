@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -33,20 +35,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 bg-dot-grid p-4">
-      <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7dd3fc]/20 text-[#0ea5e9]">
-            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </span>
-          <span className="text-xl font-semibold text-charcoal">Iterate</span>
+    <div className="min-h-screen flex items-center justify-center bg-[#fafaf9] bg-dot-grid dark:bg-[#191919] dark:bg-dot-grid p-4 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      <div className="w-full max-w-sm rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#252525] p-8">
+        <div className="flex justify-center gap-2 items-center mb-4">
+          <Image src="/logo.png" alt="Solira" width={32} height={32} />
+          <span className="text-lg font-semibold text-charcoal dark:text-gray-100">Solira</span>
         </div>
-        <h1 className="text-center text-lg font-medium text-charcoal">Sign in</h1>
+        <h1 className="text-center text-lg font-medium text-charcoal dark:text-gray-100">Sign in</h1>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Email
             </label>
             <input
@@ -55,11 +56,11 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-charcoal shadow-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-1 focus:ring-[#0ea5e9]"
+              className="mt-1 block w-full rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 px-3 py-2.5 text-charcoal dark:text-gray-100 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Password
             </label>
             <input
@@ -68,21 +69,21 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-charcoal shadow-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-1 focus:ring-[#0ea5e9]"
+              className="mt-1 block w-full rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 px-3 py-2.5 text-charcoal dark:text-gray-100 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-charcoal px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            className="w-full rounded-lg bg-charcoal dark:bg-gray-100 dark:text-charcoal px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 transition-colors"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-500">
+        <p className="mt-5 text-center text-sm text-gray-500 dark:text-gray-400">
           No account?{" "}
-          <Link href="/signup" className="font-medium text-[#0ea5e9] hover:underline">
+          <Link href="/signup" className="font-medium text-accent hover:underline">
             Sign up
           </Link>
         </p>

@@ -134,93 +134,108 @@ export default function PRDPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
+      <div className="mb-4 flex shrink-0 items-center gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <svg className="h-5 w-5 text-charcoal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 text-charcoal dark:text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h1 className="text-lg font-semibold text-charcoal">PRD Generator</h1>
+          <h1 className="text-lg font-semibold text-charcoal dark:text-gray-100">PRD Generator</h1>
         </div>
-        {draftId && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleGeneratePRD}
-              disabled={isStreamingDoc}
-              className="rounded-lg bg-charcoal px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-            >
-              {isStreamingDoc ? "Generating…" : "Generate PRD"}
-            </button>
-            <a
-              href={`/api/prd/drafts/${draftId}/export`}
-              download={`prd-${draftId}.json`}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Export for CLI
-            </a>
-          </div>
-        )}
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          — Create and refine a product requirements document. Chat with the agent to add or edit sections, or edit the canvas directly.
+        </span>
       </div>
-      <p className="mb-4 shrink-0 text-sm text-gray-500">
-        Create and refine a product requirements document. Chat with the agent to add or edit sections, or edit the canvas directly.
-      </p>
 
       {!draftId ? (
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <h2 className="text-sm font-medium text-charcoal mb-2">Drafts</h2>
-            {loadingDrafts ? (
-              <p className="text-sm text-gray-500">Loading...</p>
-            ) : drafts.length === 0 ? (
-              <p className="text-sm text-gray-500 mb-4">No drafts yet.</p>
-            ) : (
-              <ul className="space-y-2 mb-4">
-                {drafts.map((d) => (
-                  <li key={d.id}>
-                    <Link
-                      href={`/prd?draftId=${d.id}`}
-                      className="block rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-charcoal hover:bg-gray-50"
-                    >
-                      {d.title || "Untitled"} · {new Date(d.updatedAt).toLocaleDateString()}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <h2 className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Your PRDs
+            </h2>
+            <button
+              type="button"
+              onClick={handleNewBlank}
+              className="rounded-lg bg-charcoal dark:bg-gray-100 dark:text-charcoal px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-200"
+            >
+              + New PRD
+            </button>
+          </div>
+          {loadingDrafts ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
               <button
                 type="button"
                 onClick={handleNewBlank}
-                className="rounded-lg bg-charcoal px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                className="rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-600 bg-white dark:bg-[#252525] hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 min-h-[160px] flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-charcoal dark:hover:text-gray-200 transition-colors"
               >
-                New blank PRD
+                <span className="text-3xl font-light leading-none">+</span>
+                <span className="text-sm font-medium">New PRD</span>
               </button>
-              <Link
-                href="/feature-gen"
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Go to Feature Gen to send a conversation here
-              </Link>
+              {drafts.map((d) => (
+                <Link
+                  key={d.id}
+                  href={`/prd?draftId=${d.id}`}
+                  className="rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-[#252525] overflow-hidden hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all min-h-[160px] flex flex-col"
+                >
+                  <div className="h-20 shrink-0 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="p-3 flex-1 flex flex-col min-w-0">
+                    <span className="font-semibold text-charcoal dark:text-gray-100 truncate">
+                      {d.title || "Untitled"}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Updated {new Date(d.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()}
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
-          </div>
+          )}
+          <p className="mt-auto pt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            <Link href="/feature-gen" className="underline hover:text-charcoal dark:hover:text-gray-300">
+              Go to Feature Gen
+            </Link>
+            {" "}to send a conversation here.
+          </p>
         </div>
       ) : (
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden flex-shrink-0">
-            <div className="border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-gray-500">Chat</span>
-              {hasCanvasContent && !canvasOpen && (
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#252525] overflow-hidden flex-shrink-0">
+            <div className="border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Chat</span>
+              <div className="flex items-center gap-1.5">
+                {hasCanvasContent && !canvasOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setCanvasOpen(true)}
+                    className="rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-charcoal dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Show PRD
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => setCanvasOpen(true)}
-                  className="text-xs font-medium text-charcoal hover:text-gray-600 flex items-center gap-1"
+                  onClick={handleGeneratePRD}
+                  disabled={isStreamingDoc}
+                  className="rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-charcoal dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 flex items-center gap-1"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Show PRD
+                  {isStreamingDoc ? "Generating…" : "Generate PRD"}
                 </button>
-              )}
+                <a
+                  href={`/api/prd/drafts/${draftId}/export`}
+                  download={`prd-${draftId}.json`}
+                  className="rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-charcoal dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-1"
+                >
+                  Export for CLI
+                </a>
+              </div>
             </div>
             {loadingDraft ? (
               <div className="p-4 text-sm text-gray-500">Loading draft...</div>
@@ -238,11 +253,11 @@ export default function PRDPage() {
           </div>
           {hasCanvasContent && (
             <div
-              className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden border-l-0 rounded-l-none flex-shrink-0 transition-[width] duration-300 ease-out min-h-0"
+              className="flex flex-col rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#252525] overflow-hidden border-l-0 rounded-l-none flex-shrink-0 transition-[width] duration-300 ease-out min-h-0"
               style={{ width: canvasOpen ? "min(50%, 640px)" : 0 }}
             >
-              <div className="border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-2 shrink-0">
-                <span className="text-xs font-medium uppercase tracking-wide text-gray-500 truncate">
+              <div className="border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center justify-between gap-2 shrink-0">
+                <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 truncate">
                   {title || "PRD Canvas"}
                 </span>
                 <button
@@ -258,7 +273,7 @@ export default function PRDPage() {
               </div>
               <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
                 {loadingDraft ? (
-                  <div className="p-4 text-sm text-gray-500">Loading...</div>
+                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400">Loading...</div>
                 ) : (
                   <PRDDocCanvas
                     draftId={draftId}

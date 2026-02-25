@@ -157,7 +157,7 @@ export function PRDCanvas({ content, onChange, onSave, draftId }: PRDCanvasProps
           <button
             type="button"
             onClick={addGoal}
-            className="text-xs text-[#0ea5e9] hover:underline"
+            className="text-xs text-accent hover:underline"
           >
             + Add
           </button>
@@ -183,7 +183,7 @@ export function PRDCanvas({ content, onChange, onSave, draftId }: PRDCanvasProps
           <button
             type="button"
             onClick={addUserStory}
-            className="text-xs text-[#0ea5e9] hover:underline"
+            className="text-xs text-accent hover:underline"
           >
             + Add
           </button>
@@ -225,7 +225,7 @@ export function PRDCanvas({ content, onChange, onSave, draftId }: PRDCanvasProps
               <button
                 type="button"
                 onClick={() => addAc(i)}
-                className="text-xs text-[#0ea5e9] hover:underline mt-1"
+                className="text-xs text-accent hover:underline mt-1"
               >
                 + Criterion
               </button>
@@ -239,7 +239,7 @@ export function PRDCanvas({ content, onChange, onSave, draftId }: PRDCanvasProps
           <button
             type="button"
             onClick={addApiContract}
-            className="text-xs text-[#0ea5e9] hover:underline"
+            className="text-xs text-accent hover:underline"
           >
             + Add
           </button>
@@ -288,7 +288,7 @@ export function PRDCanvas({ content, onChange, onSave, draftId }: PRDCanvasProps
           <button
             type="button"
             onClick={addNonGoal}
-            className="text-xs text-[#0ea5e9] hover:underline"
+            className="text-xs text-accent hover:underline"
           >
             + Add
           </button>
@@ -314,7 +314,7 @@ export function PRDCanvas({ content, onChange, onSave, draftId }: PRDCanvasProps
           <button
             type="button"
             onClick={addOpenQuestion}
-            className="text-xs text-[#0ea5e9] hover:underline"
+            className="text-xs text-accent hover:underline"
           >
             + Add
           </button>
