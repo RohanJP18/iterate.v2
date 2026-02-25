@@ -22,6 +22,7 @@ export default function PRDPage() {
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [isStreamingDoc, setIsStreamingDoc] = useState(false);
   const [streamedContent, setStreamedContent] = useState("");
+  const [canvasOpen, setCanvasOpen] = useState(false);
 
   useEffect(() => {
     setDraftId(draftIdParam);
@@ -115,6 +116,22 @@ export default function PRDPage() {
     }
   }, [draftId, messages, markdownContent]);
 
+  const hasCanvasContent = isStreamingDoc || (markdownContent?.trim().length ?? 0) > 0;
+
+  useEffect(() => {
+    if (isStreamingDoc && hasCanvasContent) {
+      const t = requestAnimationFrame(() => setCanvasOpen(true));
+      return () => cancelAnimationFrame(t);
+    }
+  }, [isStreamingDoc, hasCanvasContent]);
+
+  const handleDocUpdate = useCallback((doc: string | null) => {
+    if (doc !== null) {
+      setMarkdownContent(doc);
+      setCanvasOpen(true);
+    }
+  }, []);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
@@ -188,10 +205,22 @@ export default function PRDPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex min-h-0 gap-4">
-          <div className="w-96 shrink-0 min-h-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="border-b border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-              Chat
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden flex-shrink-0">
+            <div className="border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-500">Chat</span>
+              {hasCanvasContent && !canvasOpen && (
+                <button
+                  type="button"
+                  onClick={() => setCanvasOpen(true)}
+                  className="text-xs font-medium text-charcoal hover:text-gray-600 flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Show PRD
+                </button>
+              )}
             </div>
             {loadingDraft ? (
               <div className="p-4 text-sm text-gray-500">Loading draft...</div>
@@ -202,29 +231,46 @@ export default function PRDPage() {
                   messages={messages}
                   onMessagesUpdate={setMessages}
                   currentCanvasMarkdown={markdownContent}
-                  onDocUpdate={(doc) => doc !== null && setMarkdownContent(doc)}
+                  onDocUpdate={handleDocUpdate}
                 />
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="border-b border-gray-200 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500 flex items-center justify-between">
-              <span>{title || "PRD Canvas"}</span>
+          {hasCanvasContent && (
+            <div
+              className="flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden border-l-0 rounded-l-none flex-shrink-0 transition-[width] duration-300 ease-out min-h-0"
+              style={{ width: canvasOpen ? "min(50%, 640px)" : 0 }}
+            >
+              <div className="border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-2 shrink-0">
+                <span className="text-xs font-medium uppercase tracking-wide text-gray-500 truncate">
+                  {title || "PRD Canvas"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCanvasOpen(false)}
+                  className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-charcoal transition-colors"
+                  aria-label="Collapse canvas"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
+                {loadingDraft ? (
+                  <div className="p-4 text-sm text-gray-500">Loading...</div>
+                ) : (
+                  <PRDDocCanvas
+                    draftId={draftId}
+                    initialMarkdown={markdownContent}
+                    onMarkdownChange={setMarkdownContent}
+                    streamedContent={streamedContent}
+                    isStreaming={isStreamingDoc}
+                  />
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              {loadingDraft ? (
-                <div className="p-4 text-sm text-gray-500">Loading...</div>
-              ) : (
-                <PRDDocCanvas
-                  draftId={draftId}
-                  initialMarkdown={markdownContent}
-                  onMarkdownChange={setMarkdownContent}
-                  streamedContent={streamedContent}
-                  isStreaming={isStreamingDoc}
-                />
-              )}
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>
