@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type PRDMessage = {
   id: string;
@@ -95,13 +97,19 @@ export function PRDChat({ draftId, messages, onMessagesUpdate, onContentUpdate, 
               className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap break-words ${
+                className={`max-w-[85%] rounded-xl px-4 py-3 text-sm break-words overflow-x-auto ${
                   m.role === "user"
                     ? "bg-charcoal text-white"
                     : "bg-gray-100 text-charcoal border border-gray-200"
                 }`}
               >
-                {m.content}
+                {m.role === "user" ? (
+                  <span className="whitespace-pre-wrap">{m.content}</span>
+                ) : (
+                  <div className="prd-chat-markdown [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h2]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-1.5 [&_p]:my-1 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-gray-300 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-gray-300 [&_td]:px-2 [&_td]:py-1 [&_tr]:border-b [&_tr]:border-gray-200">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                  </div>
+                )}
               </div>
             </div>
           ))

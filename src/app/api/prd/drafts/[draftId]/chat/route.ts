@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generatePRDArchitectResponse } from "@/lib/prd-architect-agent";
+import { getRepoContext } from "@/lib/github";
 
 export async function POST(
   req: Request,
@@ -41,6 +42,11 @@ export async function POST(
 
   const conversationHistory = draft.messages.map((m) => ({ role: m.role, content: m.content }));
 
+  const repoContext = await getRepoContext(orgId);
+  if (process.env.NODE_ENV === "development") {
+    console.log("[PRD chat] repoContext length:", repoContext?.length ?? 0);
+  }
+
   let assistantMessage: string;
   let updatedDoc: string | null = null;
 
@@ -49,6 +55,7 @@ export async function POST(
       userMessage: message,
       conversationHistory,
       currentCanvasMarkdown,
+      repoContext: repoContext || undefined,
     });
     assistantMessage = result.assistantMessage;
     updatedDoc = result.updatedDoc;

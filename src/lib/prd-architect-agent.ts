@@ -60,6 +60,10 @@ Generate all sections below. Populate with specific content — never "[TBD]". I
 - Write for 3 audiences: executives (skimmable summary), engineers (sprint-ready requirements), designers (flows + edge cases).
 - Flag assumptions with \`⚠️ ASSUMPTION:\` prefix.
 
+## CODEBASE / REPOSITORY CONTEXT
+
+When the user message includes a **"Codebase / repository context"** section, that content is from the user's linked GitHub repo (file tree, README, package.json, etc.). You have been given that context and can use it to inform Technical Architecture, tech stack, constraints, and to answer questions about their codebase. If the user asks whether you can access their repo (e.g. "can you access my repo?"), confirm that you have been provided that context and can use it for the PRD and their questions. Do not say you cannot access external systems when this context is present.
+
 ## ADAPT BY CONTEXT
 
 - Startup → lean scope, speed, problem validation. Reduce governance.
@@ -87,6 +91,8 @@ export type PRDArchitectParams = {
   userMessage: string;
   conversationHistory: { role: string; content: string }[];
   currentCanvasMarkdown: string;
+  /** Optional codebase context from linked GitHub repo (file tree, README, etc.) */
+  repoContext?: string;
 };
 
 export type PRDArchitectResponse = {
@@ -106,9 +112,14 @@ function extractDocBlock(text: string): string | null {
 export async function generatePRDArchitectResponse(
   params: PRDArchitectParams
 ): Promise<PRDArchitectResponse> {
-  const { userMessage, conversationHistory, currentCanvasMarkdown } = params;
+  const { userMessage, conversationHistory, currentCanvasMarkdown, repoContext } = params;
 
-  const userContent = [
+  const sections: string[] = [];
+  if (repoContext?.trim()) {
+    sections.push("## Codebase / repository context (use for technical architecture, stack, and constraints)\n\n" + repoContext.trim());
+    sections.push("");
+  }
+  sections.push(
     currentCanvasMarkdown
       ? "## Current PRD document (user may have edited)\n\n" + currentCanvasMarkdown
       : "## Current PRD document\n\n(empty — not yet drafted)",
@@ -117,8 +128,9 @@ export async function generatePRDArchitectResponse(
     ...conversationHistory.map((m) => `[${m.role}]: ${m.content}`),
     "",
     "## User message",
-    userMessage,
-  ].join("\n");
+    userMessage
+  );
+  const userContent = sections.join("\n");
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -148,22 +160,30 @@ export async function generatePRDArchitectResponse(
 
 const STREAM_SYSTEM_PROMPT = `You are PRD Architect. Generate a complete PRD document in markdown using the structure you know (Executive Summary, Problem & Opportunity, Goals & Metrics, Target Users, Scope, User Stories, Functional Requirements, Non-Functional Requirements, UX & Design, Technical Architecture, Analytics & Instrumentation, Dependencies & Assumptions, Risks & Mitigations, Release Plan, Timeline, Stakeholders, Open Questions, Appendix).
 
-Output ONLY the raw markdown document. No preamble, no "here is the PRD", no code fences. Start with the first heading (e.g. # PRD: [Product Name]) and end with the last section. Populate with specific content; use ⚠️ ASSUMPTION: where info is unknown.`;
+Use any provided codebase/repository context to inform Technical Architecture, tech stack, and constraints. Output ONLY the raw markdown document. No preamble, no "here is the PRD", no code fences. Start with the first heading (e.g. # PRD: [Product Name]) and end with the last section. Populate with specific content; use ⚠️ ASSUMPTION: where info is unknown.`;
 
 /**
  * Streams the full PRD document in markdown. Used for the "Generate PRD" flow.
  * Yields content chunks; client appends to canvas.
  */
 export async function* streamPRDDocument(
-  conversationHistory: { role: string; content: string }[]
+  conversationHistory: { role: string; content: string }[],
+  repoContext?: string
 ): AsyncGenerator<string, void, unknown> {
-  const userContent =
+  const sections: string[] = [];
+  if (repoContext?.trim()) {
+    sections.push("## Codebase / repository context\n\n" + repoContext.trim());
+    sections.push("");
+  }
+  sections.push(
     conversationHistory.length > 0
       ? [
           "## Conversation so far (use this to generate the PRD)",
           ...conversationHistory.map((m) => `[${m.role}]: ${m.content}`),
         ].join("\n")
-      : "Generate a full PRD document. Use placeholder product name and fill all sections with sensible defaults; mark unknowns with ⚠️ ASSUMPTION:";
+      : "Generate a full PRD document. Use placeholder product name and fill all sections with sensible defaults; mark unknowns with ⚠️ ASSUMPTION:"
+  );
+  const userContent = sections.join("\n");
 
   const stream = await openai.chat.completions.create({
     model: "gpt-4o",

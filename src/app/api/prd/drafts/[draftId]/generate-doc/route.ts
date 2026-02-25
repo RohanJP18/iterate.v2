@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getRepoContext } from "@/lib/github";
 import { prisma } from "@/lib/prisma";
 import { streamPRDDocument } from "@/lib/prd-architect-agent";
 
@@ -39,12 +40,14 @@ export async function POST(
       ? body.conversationHistory
       : draft.messages.map((m) => ({ role: m.role, content: m.content }));
 
+  const repoContext = await getRepoContext(orgId);
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of streamPRDDocument(conversationHistory)) {
+        for await (const chunk of streamPRDDocument(conversationHistory, repoContext || undefined)) {
           controller.enqueue(encoder.encode(chunk));
         }
       } catch (e) {
