@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/encrypt";
 import { buildSessionStory, buildSessionStoryWithTimeline } from "@/lib/session-summary";
-import { analyzeSessionStory } from "@/lib/analyze";
+import { analyzeSessionStory, ALLOWED_ISSUE_CATEGORIES } from "@/lib/analyze";
 import { posthogSnapshotSources, posthogSnapshotBlob } from "@/lib/posthog";
 import { parseJSONL, buildTimelineFromSnapshotEvents, normalizeRRWebEvents } from "@/lib/rrweb-timeline";
 import { detectCriticalMoments, getCategoryForTimestamp } from "@/lib/analysis/critical-moments";
@@ -193,6 +193,16 @@ export async function POST() {
 
       if (existingId) {
         const snippet = item.description.slice(0, 200);
+        const categoryFromLlm =
+          item.category && ALLOWED_ISSUE_CATEGORIES.includes(item.category as (typeof ALLOWED_ISSUE_CATEGORIES)[number])
+            ? item.category
+            : null;
+        if (categoryFromLlm) {
+          await prisma.issue.update({
+            where: { id: existingId },
+            data: { category: categoryFromLlm },
+          });
+        }
         console.log("[analyze/trigger] IssueSession upsert", {
           recordingId: rec.id,
           issueId: existingId,
@@ -225,7 +235,10 @@ export async function POST() {
         } catch {
           // leave null
         }
-        const category = getCategoryForTimestamp(item.timestampSeconds, criticalMoments);
+        const category =
+          item.category && ALLOWED_ISSUE_CATEGORIES.includes(item.category as (typeof ALLOWED_ISSUE_CATEGORIES)[number])
+            ? item.category
+            : getCategoryForTimestamp(item.timestampSeconds, criticalMoments);
         const issue = await prisma.issue.create({
           data: {
             organizationId: orgId,

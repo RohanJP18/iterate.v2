@@ -53,6 +53,14 @@ function formatTimestamp(seconds: number): string {
   return m > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `0:${s.toString().padStart(2, "0")}`;
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  console_error: "Console Errors",
+  repeated_clicks: "Repeated Clicks",
+  long_pause: "Long Pause",
+  console_log: "Console Logs",
+  other: "Other",
+};
+
 export default function IssuesPage() {
   const [filter, setFilter] = useState<"all" | "resolved">("all");
   const [groups, setGroups] = useState<IssueGroup[]>([]);
@@ -64,6 +72,7 @@ export default function IssuesPage() {
   const [integration, setIntegration] = useState<IntegrationStatus | null>(null);
 
   const [counts, setCounts] = useState({ all: 0, resolved: 0 });
+  const [clearing, setClearing] = useState(false);
   const [replayModal, setReplayModal] = useState<{
     sessionRecordingId: string;
     timestampSeconds: number;
@@ -123,6 +132,28 @@ export default function IssuesPage() {
     );
   }
 
+  async function handleClearAllIssues() {
+    if (counts.all === 0) return;
+    if (!confirm(`Clear all ${counts.all} issue(s)? This cannot be undone. You can re-run analysis to regenerate issues.`)) {
+      return;
+    }
+    setClearing(true);
+    try {
+      const res = await fetch("/api/issues/clear", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to clear");
+      setGroups([]);
+      setCounts({ all: 0, resolved: 0 });
+      setSelectedId(null);
+      setDetail(null);
+      setExpandedGroupId(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to clear issues");
+    } finally {
+      setClearing(false);
+    }
+  }
+
   const getRecordingUrl = (posthogRecordingId: string, timestampSeconds: number) => {
     if (!integration?.projectId) return null;
     const host = integration.host ?? "us.posthog.com";
@@ -138,7 +169,7 @@ export default function IssuesPage() {
         </svg>
         <h1 className="text-lg font-semibold text-charcoal dark:text-gray-100">Issues</h1>
       </div>
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         {(["all", "resolved"] as const).map((f) => (
           <button
             key={f}
@@ -154,6 +185,16 @@ export default function IssuesPage() {
             {f === "resolved" && `Resolved (${counts.resolved})`}
           </button>
         ))}
+        {counts.all > 0 && (
+          <button
+            type="button"
+            onClick={handleClearAllIssues}
+            disabled={clearing}
+            className="rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-[#252525] px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50"
+          >
+            {clearing ? "Clearing…" : "Clear all issues"}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-1 min-h-0 gap-4">
@@ -195,7 +236,9 @@ export default function IssuesPage() {
                       </svg>
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-charcoal dark:text-gray-100 truncate">
-                          {group.issues.length > 1 ? `${first.title} (${group.issues.length} similar)` : first.title}
+                          {group.issues.length > 1
+                            ? `${first.category && CATEGORY_LABELS[first.category] ? CATEGORY_LABELS[first.category] : first.title} (${group.issues.length} similar)`
+                            : first.title}
                         </div>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className={`text-xs px-1.5 py-0.5 rounded ${

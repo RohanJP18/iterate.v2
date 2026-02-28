@@ -2,6 +2,17 @@ import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+/** Allowed issue categories; must match Issue.category in schema. */
+export const ALLOWED_ISSUE_CATEGORIES = [
+  "console_error",
+  "repeated_clicks",
+  "long_pause",
+  "console_log",
+  "other",
+] as const;
+
+export type IssueCategory = (typeof ALLOWED_ISSUE_CATEGORIES)[number];
+
 export type AnalysisItem = {
   type: "bug" | "feature";
   title: string;
@@ -9,12 +20,15 @@ export type AnalysisItem = {
   severity?: string;
   timestampSeconds: number;
   suggestedFeatureReason?: string;
+  /** Set by LLM for bugs; must be one of ALLOWED_ISSUE_CATEGORIES. */
+  category?: string;
 };
 
 const SYSTEM_PROMPT = `You analyze session recording summaries to find UX bugs and suggest features.
 Output valid JSON only, no markdown. Use this exact shape:
-{"items":[{"type":"bug"|"feature","title":"short title","description":"what happened and why it's a bug or feature idea","severity":"critical|high|medium|low (for bugs)","timestampSeconds":0,"suggestedFeatureReason":"(only for type feature) why this feature would help"}]}
+{"items":[{"type":"bug"|"feature","title":"short title","description":"what happened and why it's a bug or feature idea","severity":"critical|high|medium|low (for bugs)","timestampSeconds":0,"category":"(for bugs only) one of: console_error, repeated_clicks, long_pause, console_log, other","suggestedFeatureReason":"(only for type feature) why this feature would help"}]}
 - For bugs: infer from evidence (e.g. console errors, long duration with few clicks = possible stuck UI). Use severity "critical" for blocking issues (e.g. modal never loads, form rejects valid input).
+- For bugs, set category to exactly one of: console_error (console/JS errors), repeated_clicks (rage or repeated clicks), long_pause (long idle or pause), console_log (non-error console logs), other (anything else).
 - You will receive a Session summary and one or more "Context around [time]s" blocks. Each block lists events (clicks, inputs, console logs, DOM mutations) in order with timestamps like "45.2s: ...". Use the exact timestamps (in seconds) from these lines to set timestampSeconds for when the bug is visible. For console errors, use the timestamp of the log/error line. Never use 0 when a specific time is given in the context.
 - When only a Timeline is provided (lines like "Ns: event_type") without Context blocks, use those N values in seconds for timestampSeconds. If no Timeline and no Context, use 0.
 - For features: only suggest if the session strongly implies a need. Use timestampSeconds 0 if no specific moment.
@@ -48,14 +62,21 @@ export async function analyzeSessionStory(
           typeof i.description === "string" &&
           typeof i.timestampSeconds === "number"
       )
-      .map((i) => ({
-        type: i.type === "feature" ? "feature" : "bug",
-        title: String(i.title).slice(0, 300),
-        description: String(i.description).slice(0, 2000),
-        severity: i.severity ?? "medium",
-        timestampSeconds: Math.max(0, Number(i.timestampSeconds)),
-        suggestedFeatureReason: i.suggestedFeatureReason,
-      }));
+      .map((i) => {
+        const category =
+          typeof i.category === "string" && ALLOWED_ISSUE_CATEGORIES.includes(i.category as IssueCategory)
+            ? (i.category as IssueCategory)
+            : undefined;
+        return {
+          type: i.type === "feature" ? "feature" : "bug",
+          title: String(i.title).slice(0, 300),
+          description: String(i.description).slice(0, 2000),
+          severity: i.severity ?? "medium",
+          timestampSeconds: Math.max(0, Number(i.timestampSeconds)),
+          suggestedFeatureReason: i.suggestedFeatureReason,
+          ...(category !== undefined && { category }),
+        };
+      });
   } catch {
     return [];
   }

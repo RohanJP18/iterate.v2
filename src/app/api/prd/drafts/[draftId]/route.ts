@@ -89,3 +89,26 @@ export async function PATCH(
     updatedAt: draft.updatedAt.toISOString(),
   });
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ draftId: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  const orgId = (session?.user as { organizationId?: string } | undefined)?.organizationId;
+  if (!orgId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { draftId } = await params;
+
+  const result = await prisma.pRDDraft.deleteMany({
+    where: { id: draftId, organizationId: orgId },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

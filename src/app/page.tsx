@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { DeleteDraftButton } from "@/components/DeleteDraftButton";
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
@@ -52,25 +53,31 @@ export default async function HomePage() {
             <span className="text-sm font-medium">New PRD</span>
           </Link>
           {drafts.map((d) => (
-            <Link
+            <div
               key={d.id}
-              href={`/prd?draftId=${d.id}`}
-              className="rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-[#252525] overflow-hidden hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all min-h-[160px] flex flex-col"
+              className="relative rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-[#252525] overflow-hidden hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all min-h-[160px] flex flex-col"
             >
-              <div className="h-20 shrink-0 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="p-3 flex-1 flex flex-col min-w-0">
-                <span className="font-semibold text-charcoal dark:text-gray-100 truncate">
-                  {d.title || "Untitled"}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Updated {new Date(d.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()}
-                </span>
-              </div>
-            </Link>
+              <DeleteDraftButton draftId={d.id} />
+              <Link href={`/prd?draftId=${d.id}`} className="flex-1 flex flex-col">
+                <div className="h-20 shrink-0 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="p-3 flex-1 flex flex-col min-w-0">
+                  <span className="font-semibold text-charcoal dark:text-gray-100 truncate">
+                    {d.title || "Untitled"}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Updated {new Date(d.updatedAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }).toUpperCase()}
+                  </span>
+                </div>
+              </Link>
+            </div>
           ))}
         </div>
         <p className="mt-auto pt-6 text-center text-sm text-gray-500 dark:text-gray-400">
