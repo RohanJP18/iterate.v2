@@ -80,7 +80,7 @@ export function Sidebar() {
       >
         <Image
           src="/logo.png"
-          alt="Solira"
+          alt="Iterate"
           width={collapsed ? 32 : 40}
           height={collapsed ? 32 : 40}
           className="shrink-0"

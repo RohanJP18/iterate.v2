@@ -41,8 +41,8 @@ export default function LoginPage() {
       </div>
       <div className="w-full max-w-sm rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#252525] p-8">
         <div className="flex justify-center gap-2 items-center mb-4">
-          <Image src="/logo.png" alt="Solira" width={32} height={32} />
-          <span className="text-lg font-semibold text-charcoal dark:text-gray-100">Solira</span>
+          <Image src="/logo.png" alt="Iterate" width={32} height={32} />
+          <span className="text-lg font-semibold text-charcoal dark:text-gray-100">Iterate</span>
         </div>
         <h1 className="text-center text-lg font-medium text-charcoal dark:text-gray-100">Sign in</h1>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

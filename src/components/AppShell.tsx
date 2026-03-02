@@ -29,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 shrink-0 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-[#252525] flex items-center justify-between gap-4 px-6">
-          <h1 className="text-xl font-semibold text-charcoal dark:text-gray-100">Solira</h1>
+          <h1 className="text-xl font-semibold text-charcoal dark:text-gray-100">Iterate</h1>
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <div className="flex items-center gap-3">
